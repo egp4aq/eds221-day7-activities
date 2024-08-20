@@ -1,0 +1,79 @@
+---
+title: "Day 7 EOD"
+author: "Liz Peterson"
+format: html
+editor_options: 
+  chunk_output_type: console
+warning: FALSE
+message: FALSE
+---
+
+```{r}
+# load libraries
+library(tidyverse)
+library(here)
+library(lubridate)
+```
+# Task 1: Joins on birds
+```{r}
+# read in data
+bird_observations <- read_csv(here("data", "52_pp52_birds_1.csv"))
+sites <- read_csv(here("data", "52_pp52_sites_1.csv"))
+surveys <- read_csv(here("data", "52_pp52_surveys_1.csv"))
+taxalist <- read_csv(here("data", "52_pp52_taxalist_1.csv"))
+```
+
+```{r}
+# subset bird data
+birds_subset <- bird_observations %>%
+  filter(species_id %in% c("BHCO", "RWBL") & site_id %in% c("LI-W", "NU-C"))
+```
+## left join practice
+```{r}
+birds_left_orig <- left_join(x = birds_subset, y = sites)
+birds_left <- left_join(x = birds_left_orig, y = taxalist)
+```
+## full join practice
+a full_join() between birds_subset and sites should contain everything from both of the data sets, regardless of whether their observations match. (update: I got what I was expecting)
+```{r}
+birds_full <- full_join(x = birds_subset, y = sites)
+view(birds_full)
+```
+
+# Task 2: Data wrangling and visualization with birds
+```{r}
+# rename notes column so it doesn't conflict with other data sets
+bird_observations <- bird_observations %>%
+  rename(bird_obs_notes = notes)
+```
+
+```{r}
+birds_1 <- left_join(x = bird_observations, y = taxalist)
+birds_2 <- left_join(x = birds_1, y = sites)
+birds <- left_join(birds_2, y = surveys)
+birds <- birds %>%
+  select(survey_date, common_name, park_name, bird_count)
+
+# birds <- bird_observations %>%
+#   left_join(., y = taxalist, by = "species_id") %>%
+#   left_join(., y = surveys, by = "site_id") %>%
+#   left_join(., y = sites, by = "site_id")
+
+# birds <- birds %>%
+#   select(survey_date, common_name, park_name, bird_count)
+```
+
+```{r}
+birds <- birds %>%
+  mutate(survey_month = month(survey_date)) %>%
+  mutate(survey_month = as.factor(survey_month)) %>%
+  relocate(survey_month, .after = survey_date)
+```
+
+```{r}
+birds_summary <- birds %>%
+  group_by(park_name, survey_month) %>%
+  summarize(total_birds = n()) %>%
+  filter(park_name %in% c("Lindo", "Orme", "Palomino", "Sonrisa"))
+```
+
